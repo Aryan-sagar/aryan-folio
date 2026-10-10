@@ -711,9 +711,21 @@ html.seen .hero .title, html.seen .hero .lede, html.seen .hero .hello { animatio
 /* 3. Photo: black and white with a restrained warm-brown tint */
 .hero-bg img { filter: grayscale(1) sepia(.38) brightness(.8) contrast(1.08); }
 
+
 /* 4. Intro text: larger, more line height, more space above the buttons */
 .hero .hello { font-size: 17px; line-height: 1.55; }
 .hero .hero-right .ctas { margin-top: 28px; }
 
 /* Email removed from the hero */
 .hero .mail { display: none; }
+
+
+/* HERO v10: bigger portrait, big stickers */
+
+/* Portrait: zoom in around the face so it grows without sliding out of frame */
+:root { --hero-zoom: 1.32; }
+.hero-bg img { transform-origin: 46% 24%; }
+
+/* Stickers: both back, and big (about cap height) */
+.hero .hl.ic { width: .64em; height: .64em; margin: .02em 0 0 .2em; align-self: center; }
+.hero a.hl.ic { display: inline-flex; }
