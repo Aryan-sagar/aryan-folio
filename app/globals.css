@@ -743,3 +743,6 @@ html.seen .hero .title, html.seen .hero .lede, html.seen .hero .hello { animatio
 .pipbubble .ptip { font-style: normal; font-family: var(--serif); font-size: 15px; color: var(--acc); margin-top: 4px; }
 
 @media (max-width: 1100px) { .pip, .pipbubble { display: none; } }
+
+.wq { margin-top: 6px; font-size: 14px; color: var(--mute); }
+.mtxt .who { margin-top: -4px; color: var(--acc); font-size: 14px; }

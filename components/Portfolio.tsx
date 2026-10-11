@@ -169,6 +169,20 @@ const art = (p: Pick, overlay = true) => {
     `linear-gradient(165deg, ${p.color}, #0a0a0a 140%)`,
   ].filter(Boolean).join(", ");
 };
+// A short line from each title. Change any line, or leave a title out to show its description instead.
+const QUOTES: Record<string, { q: string; who: string }> = {
+  "The Dark Knight": { q: "Some men just want to watch the world burn.", who: "Alfred" },
+  "Good Will Hunting": { q: "It's not your fault.", who: "Sean" },
+  "Interstellar": { q: "Love is the one thing that transcends time and space.", who: "Brand" },
+  "Inception": { q: "You mustn't be afraid to dream a little bigger, darling.", who: "Eames" },
+  "Fight Club": { q: "The first rule of Fight Club is: you do not talk about Fight Club.", who: "Tyler Durden" },
+  "Attack on Titan": { q: "If you don't fight, you can't win!", who: "Eren Yeager" },
+  "Bleach": { q: "Admiration is the emotion furthest from understanding.", who: "Aizen" },
+  "Naruto": { q: "I never go back on my word! That's my ninja way!", who: "Naruto Uzumaki" },
+  "Death Note": { q: "I am justice!", who: "Light Yagami" },
+  "Steins;Gate": { q: "El Psy Kongroo.", who: "Okabe" },
+  "Black Clover": { q: "Surpass your limits! Right here, right now!", who: "Asta" },
+};
 
 const CHAPTERS = [
   { id: "top", t: "Aryan Sagar", d: "AI engineer, software engineer, filmmaker" },
@@ -538,6 +552,7 @@ function Watch() {
   }, [kind]);
 
   const p = list[act] ?? list[0];
+  const qt = p ? QUOTES[p.t] : undefined;
   const label = (k: Pick["kind"]) => (k === "movie" ? "Film" : "Anime");
   return (
     <section id="watch" ref={sec} className="plain wsec">
@@ -575,7 +590,7 @@ function Watch() {
             <h3>{p.t}</h3>
             <p className="wby">{p.by} · {p.year}</p>
             {varied && <p className="wr"><span>Aryan&apos;s rating</span><b>{"★".repeat(p.stars)}</b></p>}
-            <p className="wn">&ldquo;{p.note}&rdquo;</p>
+            {qt ? (<><p className="wn">&ldquo;{qt.q}&rdquo;</p><p className="wq">{qt.who}</p></>) : <p className="wn">&ldquo;{p.note}&rdquo;</p>}
             <button className="wgo" onClick={() => setOpen(p)}>Watch →</button>
           </div>
           <button className="arrow" onClick={() => nav.current.go(1)} aria-label="Next">→</button>
@@ -590,7 +605,7 @@ function Watch() {
               <h3>{open.t}</h3>
               <p>{open.by} · {open.year}</p>
               {varied && <p className="stars">{"★".repeat(open.stars)}</p>}
-              <p className="note">{open.note}</p>
+              {QUOTES[open.t] ? (<><p className="wn">&ldquo;{QUOTES[open.t].q}&rdquo;</p><p className="wq">{QUOTES[open.t].who}</p></>) : <p className="wn">&ldquo;{open.note}&rdquo;</p>}
               <button onClick={() => setOpen(null)}>Close</button>
             </div>
           </div>
