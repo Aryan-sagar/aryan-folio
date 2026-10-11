@@ -12,18 +12,39 @@ type Spot = "tl" | "tr" | "bl" | "br";
 // What Pip says for each part of the page, and which screen corners he may perch in there.
 // `spots` are corners that are empty in that section. Edit freely: tl = top-left, tr = top-right, bl, br.
 const CHAPTERS: { id: string; t: string; d: string; tip: string; spots: Spot[] }[] = [
-  { id: "top", t: "Aryan Sagar", d: "AI engineer, software engineer, filmmaker.", tip: "Move your mouse over the big letters. They like attention.", spots: ["tr"] },
-  { id: "do", t: "What I do", d: "Build, think, create, explore.", tip: "Drag the cube to spin it, or pick a face below.", spots: ["tl", "tr"] },
-  { id: "build", t: "What I build", d: "Intelligent systems, software and products.", tip: "Hover a row to light it up.", spots: ["tr", "bl", "br"] },
-  { id: "work", t: "Selected work", d: "Projects, one at a time.", tip: "Click a project to open its case study.", spots: ["tr", "bl", "br"] },
-  { id: "film", t: "Filmmaking", d: "Engineer by profession, filmmaker whenever I can.", tip: "Keep scrolling. The film strip moves sideways.", spots: ["bl", "br"] },
-  { id: "side", t: "Side quests", d: "Things I'm learning because I find them interesting.", tip: "Scroll slowly. Each interest gets its own scene.", spots: ["tl", "tr"] },
-  { id: "watch", t: "Watch", d: "The films, worlds and stories I keep coming back to.", tip: "Drag the posters, or click one to open it.", spots: ["tr", "bl", "br"] },
-  { id: "about", t: "About", d: "Who is behind this.", tip: "Psst, he signs his name in cursive.", spots: ["tr", "bl"] },
-  { id: "contact", t: "Contact", d: "Have something interesting in mind?", tip: "Click the orange circle to say hello.", spots: ["tl", "tr"] },
+  { id: "top", t: "That's Aryan. I'm the unpaid tour guide.", d: "AI engineer by trade, software engineer by practice, filmmaker by obsession. Apparently, one personality wasn't enough.", tip: "Go on, hover over the giant letters. They didn't get this big to be ignored.", spots: ["tr"] },
+  { id: "do", t: "One brain. Several open tabs.", d: "Engineering, filmmaking, ideas, and an unreasonable number of things he wants to learn. Sleep is somewhere on the roadmap.", tip: "Drag the cube. Four sides, zero idea what he's doing with his life.", spots: ["tl", "tr"] },
+  { id: "build", t: "Less buzzword bingo. More building.", d: "AI systems, backend infrastructure, and products that do more than look impressive in a demo.", tip: "Hover over a skill. The engineer made the interface hover over things too. Very on-brand.", spots: ["tr", "bl", "br"] },
+  { id: "work", t: "Proof that he actually builds things.", d: "Five projects, real engineering decisions, and the occasional bug that builds character. Click a case study to see what's under the hood.", tip: "The screenshots are pretty. The engineering underneath is the interesting part. Go on, investigate.", spots: ["tr", "bl", "br"] },
+  { id: "film", t: "From debugging to directing.", d: "iPhone footage, DaVinci timelines, cinematic ambitions. Turns out, not every frame needs a stack trace.", tip: "Swipe sideways. Cinema has always been dramatic about its entrances.", spots: ["bl", "br"] },
+  { id: "side", t: "Curiosity has terrible time management.", d: "Philosophy, history, travel, chess, and books. No certificates, no productivity hack. Just learning things because they're interesting.", tip: "Take your time. Unlike his browser, this section has no 47 open tabs.", spots: ["tl", "tr"] },
+  { id: "watch", t: "Strong opinions. Questionable sleep schedule.", d: "Films and anime worth revisiting. Nolan-level mind games optional; excellent storytelling mandatory.", tip: "Drag a poster or open one. My film criticism is free. The director's cut is extra.", spots: ["tr", "bl", "br"] },
+  { id: "about", t: "Plot twist: he's a person.", d: "A little about the human behind the projects, the curiosity, and the suspiciously ambitious to-do list.", tip: "Stay for the signature. Apparently, signing your name in cursive is still a personality trait.", spots: ["tr", "bl"] },
+  { id: "contact", t: "Your turn. Make it interesting.", d: "Have a cool idea, an interesting opportunity, or something worth building together? Aryan's inbox is open.", tip: "Click the orange circle. It's a button, not a tiny sun having an identity crisis.", spots: ["tl", "tr"] },
 ];
-const QUIPS = ["Boop!", "Hi again!", "Keep scrolling, there is more.", "I only know this page, but I know it well.", "Careful, I bounce."];
 
+const QUIPS = [
+  "Boop. Professional interaction complete.",
+  "Ow. Kidding, I'm a sphere.",
+  "Still here? Excellent taste.",
+  "My entire world is this website. It's a nice website.",
+  "Wheee! Okay, back to the portfolio.",
+  "I'd ask for a salary, but I don't have a bank account.",
+  "That click had excellent character development.",
+  "The developer says this is intentional.",
+  "No bugs here. Only undocumented features.",
+  "You scroll. I roll. We all have our roles.",
+  "Fun fact: Aryan made me work for free.",
+  "This portfolio has more personality than his terminal.",
+  "You're exploring. I'm pretending to be in control.",
+  "I'm the emotional support animal for this codebase.",
+  "Achievement unlocked: you found a tiny orange guy.",
+  "I would explain the code, but I wasn't invited to the stand-up.",
+  "Somewhere, a semicolon just saved a life.",
+  "Please admire the website. My rent depends on it.",
+  "This is what happens when engineers discover CSS.",
+  "Don't mind me. Just orbiting my career prospects.",
+];
 const SIZE = 112;
 const MARGIN = 14;
 
@@ -209,7 +230,7 @@ export default function Pip() {
       ready = true;
       if (cur) { arrive(cur); return; }
       doHop();
-      say("Hi, I'm Pip", "I'll hop around and tell you where you are.", "Click me for a tip.");
+      say("Hi, I'm Pip", "Page guide and professional hopper. I'll tell you where you are.", "Click me for a tip.");
     });
 
     const update = () => {
