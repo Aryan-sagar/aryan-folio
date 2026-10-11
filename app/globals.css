@@ -729,3 +729,17 @@ html.seen .hero .title, html.seen .hero .lede, html.seen .hero .hello { animatio
 /* Stickers: both back, and big (about cap height) */
 .hero .hl.ic { width: .64em; height: .64em; margin: .02em 0 0 .2em; align-self: center; }
 .hero a.hl.ic { display: inline-flex; }
+
+/* PIP (three.js) */
+.pip { position: fixed; top: 0; left: 0; width: 112px; height: 112px; z-index: 75; cursor: pointer; will-change: transform; }
+.pip canvas { display: block; }
+.pipbubble { position: fixed; top: 0; left: 0; z-index: 75; max-width: min(300px, 26vw); padding: 12px 16px; display: flex; flex-direction: column; gap: 3px; border-radius: 4px 16px 16px 16px; background: rgba(14,13,11,.82); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,.09); opacity: 0; transform: translateX(-8px) scale(.96); transform-origin: left top; transition: opacity .3s, transform .35s cubic-bezier(.2,.8,.2,1); pointer-events: none; }
+.pipbubble.show { opacity: 1; transform: none; }
+.pipbubble[data-side="l"] { border-radius: 16px 4px 16px 16px; transform-origin: right top; transform: translateX(8px) scale(.96); }
+.pipbubble[data-side="l"].show { transform: none; }
+.pipbubble .pt { font-size: 16px; font-weight: 700; letter-spacing: -.015em; line-height: 1.15; }
+.pipbubble .pd { font-size: 13px; line-height: 1.4; color: rgba(242,239,232,.8); }
+.pipbubble .pd:empty { display: none; }
+.pipbubble .ptip { font-style: normal; font-family: var(--serif); font-size: 15px; color: var(--acc); margin-top: 4px; }
+
+@media (max-width: 1100px) { .pip, .pipbubble { display: none; } }

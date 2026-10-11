@@ -6,7 +6,7 @@ import Lenis from "lenis";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { FRAMES, WATCH, SIDE, ABOUT, ABOUT_ROTATE, type Pick } from "./content";
-
+import Pip from "../app/Pip";
 gsap.registerPlugin(ScrollTrigger);
 
 // Quiet "film stock" colours for the project preview cards. Swap for real stills later.
@@ -182,38 +182,7 @@ const CHAPTERS = [
 ];
 
 // Fixed chapter indicator: always says where you are.
-function Hud() {
-  const box = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const [n, t, d] = ["hn", "ht", "hd"].map((c) => box.current!.querySelector<HTMLElement>("." + c)!);
-    let cur = 0;
-    box.current!.classList.add("off");
-    const update = () => {
-      let idx = 0;
-      CHAPTERS.forEach((c, i) => {
-        const el = document.getElementById(c.id);
-        if (el && el.getBoundingClientRect().top <= window.innerHeight * 0.45) idx = i;
-      });
-      if (idx === cur) return;
-      cur = idx;
-      box.current!.classList.toggle("off", idx === 0);
-      n.textContent = `${String(idx + 1).padStart(2, "0")} / ${String(CHAPTERS.length).padStart(2, "0")}`;
-      t.textContent = CHAPTERS[idx].t;
-      d.textContent = CHAPTERS[idx].d;
-      gsap.fromTo(box.current!.children, { y: 10, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, stagger: 0.06, overwrite: true });
-    };
-    const st = ScrollTrigger.create({ start: 0, end: "max", onUpdate: update });
-    ScrollTrigger.addEventListener("refresh", update);
-    return () => { st.kill(); ScrollTrigger.removeEventListener("refresh", update); };
-  }, []);
-  return (
-    <div ref={box} className="hud" aria-hidden="true">
-      <span className="hn">01 / 08</span>
-      <strong className="ht">{CHAPTERS[0].t}</strong>
-      <span className="hd">{CHAPTERS[0].d}</span>
-    </div>
-  );
-}
+
 
 function FaceIcon({ k }: { k: string }) {
   const p: Record<string, React.ReactNode> = {
@@ -997,7 +966,7 @@ export default function Portfolio() {
           <text className="w" x="210" y="150" textAnchor="middle" fontSize="150" mask="url(#mWelcome)">welcome</text>
         </svg>
       </div>
-      <Hud />
+      <Pip />
       <div ref={cursor} className="cursor" />
       <div className="grain" />
 
