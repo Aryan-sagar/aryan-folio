@@ -11,17 +11,22 @@ type Spot = "tl" | "tr" | "bl" | "br";
 
 // What Pip says for each part of the page, and which screen corners he may perch in there.
 // `spots` are corners that are empty in that section. Edit freely: tl = top-left, tr = top-right, bl, br.
+// Keep this list in the same order as the sections appear on the page.
 const CHAPTERS: { id: string; t: string; d: string; tip: string; spots: Spot[] }[] = [
   { id: "top", t: "That's Aryan. I'm the unpaid tour guide.", d: "AI engineer by trade, software engineer by practice, filmmaker by obsession. Apparently, one personality wasn't enough.", tip: "Go on, hover over the giant letters. They didn't get this big to be ignored.", spots: ["tr"] },
   { id: "do", t: "One brain. Several open tabs.", d: "Engineering, filmmaking, ideas, and an unreasonable number of things he wants to learn. Sleep is somewhere on the roadmap.", tip: "Drag the cube. Four sides, zero idea what he's doing with his life.", spots: ["tl", "tr"] },
   { id: "build", t: "Less buzzword bingo. More building.", d: "AI systems, backend infrastructure, and products that do more than look impressive in a demo.", tip: "Hover over a skill. The engineer made the interface hover over things too. Very on-brand.", spots: ["tr", "bl", "br"] },
-  { id: "work", t: "Proof that he actually builds things.", d: "Five projects, real engineering decisions, and the occasional bug that builds character. Click a case study to see what's under the hood.", tip: "The screenshots are pretty. The engineering underneath is the interesting part. Go on, investigate.", spots: ["tr", "bl", "br"] },
+  { id: "work", t: "Proof that he actually builds things.", d: "Five projects, real engineering decisions, and the occasional bug that builds character. Click a case study to see what's under the hood.", tip: "Scroll, or use the tabs up top. Every project opens into a full write-up. Go on, investigate.", spots: ["tr", "bl", "br"] },
+  { id: "beyond", t: "The part where he gets philosophical.", d: "Anyone can follow a spec. The harder question is what deserves to exist in the first place.", tip: "Scroll slowly. The words are timed. He is very proud of that.", spots: ["tr", "br"] },
   { id: "film", t: "From debugging to directing.", d: "iPhone footage, DaVinci timelines, cinematic ambitions. Turns out, not every frame needs a stack trace.", tip: "Swipe sideways. Cinema has always been dramatic about its entrances.", spots: ["bl", "br"] },
   { id: "side", t: "Curiosity has terrible time management.", d: "Philosophy, history, travel, chess, and books. No certificates, no productivity hack. Just learning things because they're interesting.", tip: "Take your time. Unlike his browser, this section has no 47 open tabs.", spots: ["tl", "tr"] },
   { id: "watch", t: "Strong opinions. Questionable sleep schedule.", d: "Films and anime worth revisiting. Nolan-level mind games optional; excellent storytelling mandatory.", tip: "Drag a poster or open one. My film criticism is free. The director's cut is extra.", spots: ["tr", "bl", "br"] },
   { id: "about", t: "Plot twist: he's a person.", d: "A little about the human behind the projects, the curiosity, and the suspiciously ambitious to-do list.", tip: "Stay for the signature. Apparently, signing your name in cursive is still a personality trait.", spots: ["tr", "bl"] },
   { id: "contact", t: "Your turn. Make it interesting.", d: "Have a cool idea, an interesting opportunity, or something worth building together? Aryan's inbox is open.", tip: "Click the orange circle. It's a button, not a tiny sun having an identity crisis.", spots: ["tl", "tr"] },
 ];
+
+// Pip puts on sunglasses in these sections.
+const COOL = ["film", "watch"];
 
 const QUIPS = [
   "Boop. Professional interaction complete.",
@@ -44,6 +49,10 @@ const QUIPS = [
   "Please admire the website. My rent depends on it.",
   "This is what happens when engineers discover CSS.",
   "Don't mind me. Just orbiting my career prospects.",
+  "I do my own stunts. Mostly hopping.",
+  "I have feet, but no shoes. Aryan says it's a budget thing.",
+  "Click me four times fast. I dare you. I've been practicing.",
+  "I've been told I'm 'a lot of sphere'.",
 ];
 const SIZE = 112;
 const MARGIN = 14;
@@ -55,6 +64,8 @@ const spotXY = (s: Spot) => {
 
 // Pip: a small original 3D guide. He hops to a new corner as you move through the page,
 // says what the section is about, then shrinks back so he stays out of the way.
+// Little extras: sunglasses in the film sections, a nap when you go quiet, dizziness if you scroll like a maniac,
+// a backflip if you click him four times fast, and a time-of-day hello.
 export default function Pip() {
   const wrap = useRef<HTMLDivElement>(null);
   const bub = useRef<HTMLDivElement>(null);
@@ -83,6 +94,8 @@ export default function Pip() {
     const mat = (c: number, r = 0.55) => new THREE.MeshStandardMaterial({ color: c, roughness: r });
     const cream = mat(0xf2efe8), white = mat(0xffffff, 0.2), dark = mat(0x151412, 0.25), orange = mat(0xffa94d);
     const glow = new THREE.MeshStandardMaterial({ color: 0xffa94d, emissive: 0xffa94d, emissiveIntensity: 0.6, roughness: 0.3 });
+    const lens = new THREE.MeshStandardMaterial({ color: 0x0c0b0a, roughness: 0.12, metalness: 0.35 });
+    const glint = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.6 });
 
     const pip = new THREE.Group();
     scene.add(pip);
@@ -106,6 +119,19 @@ export default function Pip() {
     const mouth = add(new THREE.TorusGeometry(0.13, 0.03, 8, 20, Math.PI), dark, 0, -0.22, 0.92);
     mouth.rotation.z = Math.PI;
 
+    // Sunglasses: hidden until a "cool" section
+    const shades = new THREE.Group();
+    shades.visible = false;
+    shades.scale.setScalar(0.0001);
+    pip.add(shades);
+    ([-1, 1] as const).forEach((s) => {
+      const l = add(new THREE.SphereGeometry(0.36, 28, 28), lens, s * 0.4, 0.3, 1.0, shades);
+      l.scale.set(1.05, 0.85, 0.35);
+      const g = add(new THREE.SphereGeometry(0.045, 10, 10), glint, s * 0.4 - 0.12, 0.42, 1.12, shades);
+      g.scale.set(1, 1, 0.5);
+    });
+    add(new THREE.BoxGeometry(0.2, 0.06, 0.06), lens, 0, 0.34, 1.0, shades);
+
     const ant = new THREE.Group();
     ant.position.set(0, 1.02, 0);
     pip.add(ant);
@@ -123,8 +149,11 @@ export default function Pip() {
     });
 
     // ---- behaviour
-    const state = { mx: 0, my: 0, hover: false, talk: 0 };
-    const hop = { y: 0, sq: 0, lean: 0 };
+    const state = { mx: 0, my: 0, hover: false, talk: 0, dizzy: 0 };
+    const hop = { y: 0, sq: 0, lean: 0, flip: 0 };
+    const shade = { s: 0 };
+    const sleepy = { v: 0 };
+    const rot = { x: 0, y: 0, z: 0 };
     const doHop = () => {
       if (reduce) return;
       gsap.timeline()
@@ -132,6 +161,16 @@ export default function Pip() {
         .to(hop, { y: 0.7, sq: 0.12, duration: 0.28, ease: "power2.out" })
         .to(hop, { y: 0, sq: -0.15, duration: 0.26, ease: "power2.in" })
         .to(hop, { sq: 0, duration: 0.35, ease: "elastic.out(1,.4)" });
+    };
+    const backflip = () => {
+      gsap.killTweensOf(hop);
+      gsap.timeline()
+        .to(hop, { sq: -0.2, duration: 0.12 })
+        .to(hop, { y: 0.35, sq: 0.15, duration: 0.35, ease: "power2.out" })
+        .to(hop, { flip: Math.PI * 2, duration: 0.75, ease: "power1.inOut" }, "<")
+        .to(hop, { y: 0, sq: -0.2, duration: 0.3, ease: "power2.in" })
+        .set(hop, { flip: 0 })
+        .to(hop, { sq: 0, duration: 0.5, ease: "elastic.out(1,.4)" });
     };
 
     // Where Pip is on screen, and how he gets to a new corner
@@ -210,6 +249,8 @@ export default function Pip() {
 
     let cur = 0, ready = false, quip = 0;
     let pend: ReturnType<typeof setTimeout> | undefined;
+    let dizzyNext = false, lastDizzy = 0;
+    let clicks: number[] = [];
     const pick = (idx: number): Spot => {
       const all = CHAPTERS[idx].spots;
       const others = all.filter((s) => s !== spot);
@@ -220,7 +261,27 @@ export default function Pip() {
       clearTimeout(timer);
       bubble.classList.remove("show");
       wake();
-      moveTo(pick(idx), () => say(CHAPTERS[idx].t, CHAPTERS[idx].d));
+      const cool = COOL.includes(CHAPTERS[idx].id);
+      gsap.to(shade, { s: cool ? 1 : 0, duration: cool ? 0.6 : 0.3, ease: cool ? "back.out(2.2)" : "power2.in", overwrite: true });
+      moveTo(pick(idx), () => {
+        const c = CHAPTERS[idx];
+        if (dizzyNext) {
+          dizzyNext = false;
+          say("Whoa. I need a minute.", `${c.t} ${c.d}`);
+        } else {
+          say(c.t, c.d);
+        }
+      });
+    };
+
+    // Nap when nothing has happened for a while, wake on any activity
+    let lastActive = performance.now(), asleep = false;
+    const poke = () => {
+      lastActive = performance.now();
+      if (!asleep) return;
+      asleep = false;
+      gsap.to(sleepy, { v: 0, duration: 0.4, overwrite: true });
+      if (ready) { doHop(); say("Oh. I was just resting my eyes.", "", CHAPTERS[cur].tip, 4000); }
     };
 
     const seen = (() => { try { return sessionStorage.getItem("aryan-intro") === "1"; } catch { return false; } })();
@@ -230,7 +291,9 @@ export default function Pip() {
       ready = true;
       if (cur) { arrive(cur); return; }
       doHop();
-      say("Hi, I'm Pip", "Page guide and professional hopper. I'll tell you where you are.", "Click me for a tip.");
+      const hr = new Date().getHours();
+      const hello = hr < 5 ? "Still up? Respect." : hr < 12 ? "Good morning." : hr < 18 ? "Good afternoon." : "Good evening.";
+      say("Hi, I'm Pip", `${hello} Page guide and professional hopper. I'll tell you where you are.`, "Click me for a tip.");
     });
 
     const update = () => {
@@ -245,18 +308,44 @@ export default function Pip() {
       clearTimeout(pend);
       pend = setTimeout(() => arrive(idx), 300); // wait until the scroll settles
     };
-    const st = ScrollTrigger.create({ start: 0, end: "max", onUpdate: update });
+    const st = ScrollTrigger.create({
+      start: 0, end: "max",
+      onUpdate: (self) => {
+        poke();
+        update();
+        // Scroll like a maniac and Pip gets dizzy (at most once every 12 seconds)
+        if (!reduce && ready && Math.abs(self.getVelocity()) > 5000 && performance.now() - lastDizzy > 12000) {
+          lastDizzy = performance.now();
+          state.dizzy = 1;
+          dizzyNext = true;
+        }
+      },
+    });
 
     const onMove = (e: MouseEvent) => {
+      poke();
       const r = host.getBoundingClientRect();
       const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
       state.mx = gsap.utils.clamp(-1, 1, (e.clientX - cx) / 420);
       state.my = gsap.utils.clamp(-1, 1, -(e.clientY - cy) / 320);
     };
     window.addEventListener("mousemove", onMove);
-    const onEnter = () => { state.hover = true; if (ready) say(CHAPTERS[cur].t, CHAPTERS[cur].d, CHAPTERS[cur].tip); };
+    window.addEventListener("keydown", poke);
+    const onVis = () => { if (!document.hidden) lastActive = performance.now(); };
+    document.addEventListener("visibilitychange", onVis);
+    const onEnter = () => { poke(); state.hover = true; if (ready) say(CHAPTERS[cur].t, CHAPTERS[cur].d, CHAPTERS[cur].tip); };
     const onLeave = () => { state.hover = false; hideLater(1800); };
     const onClick = () => {
+      poke();
+      const now = performance.now();
+      clicks = clicks.filter((c) => now - c < 1400);
+      clicks.push(now);
+      if (!reduce && clicks.length >= 4) {
+        clicks = [];
+        backflip();
+        say("Ta-da. Four clicks, one backflip.", "I'm contractually obligated to be dizzy now.", "", 4500);
+        return;
+      }
       doHop();
       quip = (quip + 1) % 3;
       if (quip === 0) say(QUIPS[Math.floor(Math.random() * QUIPS.length)], "", CHAPTERS[cur].tip, 5000);
@@ -278,25 +367,39 @@ export default function Pip() {
       if (document.hidden) return;
       const t = clock.getElapsedTime();
       const m = reduce ? 0 : 1;
+
+      if (ready && !asleep && performance.now() - lastActive > 30000) {
+        asleep = true;
+        gsap.to(sleepy, { v: 1, duration: 1.2, overwrite: true });
+        say("Zzz…", "Nobody's scrolling, so I'm resting my eyes.", "", 5000);
+      }
+      const sl = sleepy.v, dz = state.dizzy;
+      state.dizzy *= 0.985;
+
       pip.position.y = Math.sin(t * 2) * 0.04 * m + hop.y;
       pip.scale.set(1 - hop.sq * 0.5, 1 + hop.sq, 1 - hop.sq * 0.5);
-      pip.rotation.y += (state.mx * 0.5 - pip.rotation.y) * 0.1;
-      pip.rotation.x += (-state.my * 0.28 - pip.rotation.x) * 0.1;
-      pip.rotation.z += (hop.lean - pip.rotation.z) * 0.2;
+      rot.y += (state.mx * 0.5 - rot.y) * 0.1;
+      rot.x += (-state.my * 0.28 + sl * 0.35 - rot.x) * 0.1;
+      rot.z += (hop.lean + Math.sin(t * 9) * 0.18 * dz - rot.z) * 0.2;
+      pip.rotation.set(rot.x - hop.flip, rot.y, rot.z);
+
       pupils.forEach((p, i) => {
-        p.position.x = (i ? 0.4 : -0.4) + state.mx * 0.08;
-        p.position.y = 0.3 + state.my * 0.07;
+        p.position.x = (i ? 0.4 : -0.4) + state.mx * 0.08 + Math.cos(t * 14 + i) * 0.07 * dz;
+        p.position.y = 0.3 + state.my * 0.07 + Math.sin(t * 14 + i) * 0.07 * dz;
       });
-      const bl = t % 3.4 < 0.12 ? 0.1 : 1;
+      const bl = (t % 3.4 < 0.12 ? 0.1 : 1) * (1 - 0.92 * sl);
       eyes.forEach((e) => (e.scale.y = 1.1 * bl));
       pupils.forEach((p) => (p.scale.y = bl));
-      ant.rotation.z = Math.sin(t * 2.4) * 0.12 * m - state.mx * 0.15;
+      ant.rotation.z = Math.sin(t * 2.4) * 0.12 * m - state.mx * 0.15 + Math.sin(t * 12) * 0.3 * dz;
       state.talk *= 0.97;
-      glow.emissiveIntensity = 0.5 + 0.25 * Math.sin(t * 3) + state.talk * 1.1;
+      glow.emissiveIntensity = (0.5 + 0.25 * Math.sin(t * 3) + state.talk * 1.1) * (1 - 0.6 * sl);
       arms.forEach(({ g, s }) => {
         const target = state.hover && s > 0 ? -0.9 + Math.sin(t * 10) * 0.5 : 0;
         g.rotation.z += (s * target * -1 - g.rotation.z) * 0.15;
       });
+
+      shades.visible = shade.s > 0.01;
+      shades.scale.setScalar(Math.max(0.0001, shade.s));
       renderer.render(scene, cam);
     };
     gsap.ticker.add(tick);
@@ -305,12 +408,14 @@ export default function Pip() {
       gsap.ticker.remove(tick);
       startCall.kill();
       flight?.kill();
-      gsap.killTweensOf([host, hop, fly]);
+      gsap.killTweensOf([host, hop, fly, shade, sleepy]);
       clearTimeout(timer);
       clearTimeout(pend);
       st.kill();
       window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("keydown", poke);
       window.removeEventListener("resize", onResize);
+      document.removeEventListener("visibilitychange", onVis);
       host.removeEventListener("mouseenter", onEnter);
       host.removeEventListener("mouseleave", onLeave);
       host.removeEventListener("click", onClick);

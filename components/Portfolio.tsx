@@ -7,6 +7,8 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { FRAMES, WATCH, SIDE, ABOUT, ABOUT_ROTATE, type Pick } from "./content";
 import Pip from "../app/Pip";
+import Link from "next/link";
+import { slugFor, STUDIES } from "./work-data";
 gsap.registerPlugin(ScrollTrigger);
 
 // Quiet "film stock" colours for the project preview cards. Swap for real stills later.
@@ -275,108 +277,80 @@ function Clock() {
   return <span className="clock">{t || "--:--:--"} IST</span>;
 }
 
+
 function Work() {
   const ref = useRef<HTMLElement>(null);
   const trig = useRef<ScrollTrigger | null>(null);
   const n = WORK.length;
-  const [open, setOpen] = useState<Proj | null>(null);
-  useEffect(() => {
-    if (!open) return;
-    lenisRef?.stop();
-    const k = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(null); };
-    window.addEventListener("keydown", k);
-    return () => { lenisRef?.start(); window.removeEventListener("keydown", k); };
-  }, [open]);
+  const [act, setAct] = useState(0);
+  const actRef = useRef(0);
+
   useEffect(() => {
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const ctx = gsap.context(() => {
-      const strips = gsap.utils.toArray<HTMLElement>(".strip");
-      const bgs = gsap.utils.toArray<HTMLElement>(".wbg");
-      const tabs = gsap.utils.toArray<HTMLElement>(".wtab");
-      const tl = gsap.timeline({
-        scrollTrigger: {
-          trigger: ref.current, start: "top top", end: `+=${n * 55}%`, pin: true, scrub: 0.7,
-          onUpdate: (self) => {
-            const idx = Math.min(n - 1, Math.round(self.progress * (n - 1)));
-            tabs.forEach((t, k) => t.classList.toggle("on", k === idx));
-          },
+    const mm = gsap.matchMedia();
+    // Pinned one-project-at-a-time stage on desktop. On phones the projects simply stack.
+    mm.add("(min-width: 821px)", () => {
+      const t = ScrollTrigger.create({
+        trigger: ref.current, start: "top top", end: `+=${n * 80}%`, pin: true,
+        onUpdate: (self) => {
+          const i = Math.min(n - 1, Math.floor(self.progress * n));
+          if (i !== actRef.current) { actRef.current = i; setAct(i); }
         },
       });
-      trig.current = tl.scrollTrigger ?? null;
-      strips.forEach((s, i) => {
-        if (!i) return;
-        tl.fromTo(s, { y: "110vh" }, { y: 0, duration: 1, ease: "power2.out" }, i - 1)
-          .fromTo(bgs[i], { opacity: 0 }, { opacity: 1, duration: 1, ease: "none" }, i - 1)
-          .to(strips.slice(0, i), { y: "-=44", scale: "-=0.04", duration: 1, ease: "power2.out" }, i - 1);
-      });
-    }, ref);
-    return () => ctx.revert();
+      trig.current = t;
+      return () => { t.kill(); trig.current = null; };
+    });
+    return () => mm.revert();
   }, [n]);
 
   const jump = (i: number) => {
     const t = trig.current;
-    if (!t) return;
-    const y = t.start + (i / (n - 1)) * (t.end - t.start);
+    if (!t) { actRef.current = i; setAct(i); return; }
+    const y = t.start + ((i + 0.5) / n) * (t.end - t.start);
     if (lenisRef) lenisRef.scrollTo(y, { duration: 1.3 }); else window.scrollTo({ top: y, behavior: "smooth" });
   };
 
   return (
-    <section id="work" ref={ref} className="wstage">
-      {WORK.map((p) => (
-        <div className="wbg" key={p.id} style={{ background: `radial-gradient(60% 70% at 50% 55%, ${p.glow}30, transparent 72%)` }} />
+    <section id="work" ref={ref} className="wk">
+      {WORK.map((p, i) => (
+        <div key={p.id} className={`wk-glow${i === act ? " on" : ""}`} aria-hidden="true"
+          style={{ background: `radial-gradient(55% 65% at 72% 55%, ${p.glow}33, transparent 70%)` }} />
       ))}
-      <div className="wtabs" role="tablist">
+      <div className="wk-tabs">
         {WORK.map((p, i) => (
-          <button key={p.id} className={`wtab ${i === 0 ? "on" : ""}`} onClick={() => jump(i)}><b>{String(i + 1).padStart(2, "0")}</b> {p.title}</button>
+          <button key={p.id} type="button" className={i === act ? "on" : ""} aria-current={i === act} onClick={() => jump(i)}>
+            <b>{String(i + 1).padStart(2, "0")}</b> {p.title}
+          </button>
         ))}
       </div>
-      <div className="wdeck">
-        {WORK.map((p, i) => (
-          <article className="strip" key={p.id} data-cursor="Open →" onClick={() => setOpen(p)}>
-            <div className="s-l">
-              <b>{String(i + 1).padStart(2, "0")}</b>
-              <div>
-                <span className="cat">{p.tags}</span>
-                <p className="pline">{p.line}</p>
-                {p.stack.length > 0 && <div className="stk">{p.stack.map((t) => <i key={t}>{t}</i>)}</div>}
+      <div className="wk-stage">
+        {WORK.map((p, i) => {
+          const st = STUDIES.find((s) => s.id === p.id);
+          const href = `/work/${slugFor(p.id)}`;
+          const stat = st?.numbers[0];
+          return (
+            <article key={p.id} className={`wk-slide${i === act ? " on" : ""}`}>
+              <div className="wk-text">
+                <h3><Link href={href}>{p.title}</Link></h3>
+                <p className="wk-tags">{p.tags}</p>
+                <p className="wk-line">{st?.intro ?? p.line}</p>
+                <p className="wk-stack">{(st?.stack ?? p.stack).slice(0, 6).join(", ")}</p>
+                <div className="wk-cta">
+                  <Link className="btn solid" href={href}>Read the case study</Link>
+                  {p.repo && <a className="btn" href={p.repo} target="_blank" rel="noreferrer">View code</a>}
+                </div>
               </div>
-            </div>
-            <div className="s-m"><Viz id={p.id} /></div>
-            <div className="s-r">
-              <h3>{p.title}</h3>
-              <span>{p.year ?? ""}</span>
-              <button type="button" className="view">View case study →</button>
-            </div>
-          </article>
-        ))}
+              <div className="wk-vis">
+                <Link className="wk-panel" href={href} data-cursor="Open →" aria-label={`${p.title} case study`}><Viz id={p.id} /></Link>
+                {stat && <p className="wk-stat"><b>{stat[0]}</b>{stat[1]}</p>}
+              </div>
+            </article>
+          );
+        })}
       </div>
-      {open && typeof document !== "undefined" && createPortal(
-        <div className="modal" data-lenis-prevent onClick={() => setOpen(null)}>
-          <div className="mcard pcard" onClick={(e) => e.stopPropagation()}>
-            <div className="pviz"><Viz id={open.id} /></div>
-            <div className="mtxt">
-              <p>{open.tags}{open.year ? ` · ${open.year}` : ""}</p>
-              <h3>{open.title}</h3>
-              <p className="pline2">{open.line}</p>
-              <ul className="plist">{open.points.map((t) => <li key={t}>{t}</li>)}</ul>
-              {open.stats && open.stats.length > 0 && (
-                <div className="pstats">{open.stats.map(([n, l]) => <div key={l}><b>{n}</b><span>{l}</span></div>)}</div>
-              )}
-              {open.stack.length > 0 && <div className="stk dark">{open.stack.map((t) => <i key={t}>{t}</i>)}</div>}
-              <div className="pbtns">
-                {open.repo && <a className="btn solid" href={open.repo} target="_blank" rel="noreferrer">View code</a>}
-                {open.demo && <a className="btn" href={open.demo} target="_blank" rel="noreferrer">Live demo</a>}
-                <button className="btn" onClick={() => setOpen(null)}>Close</button>
-              </div>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
     </section>
   );
 }
-
 // Tries the given file, then the same name with .jpg/.jpeg/.png/.webp. Shows the shot number until one loads.
 function FrameImg({ src, n }: { src: string; n: string }) {
   const [url, setUrl] = useState<string | null>(null);
@@ -605,7 +579,7 @@ function Watch() {
               <h3>{open.t}</h3>
               <p>{open.by} · {open.year}</p>
               {varied && <p className="stars">{"★".repeat(open.stars)}</p>}
-              {QUOTES[open.t] ? (<><p className="wn">&ldquo;{QUOTES[open.t].q}&rdquo;</p><p className="wq">{QUOTES[open.t].who}</p></>) : <p className="wn">&ldquo;{open.note}&rdquo;</p>}
+              {QUOTES[open.t] ? (<><p className="wn">&ldquo;{QUOTES[open.t].q}&rdquo;</p><p className="wq">{QUOTES[open.t].who}</p></>) : <p className="wn">&ldquo;{open.note}&rdquo;</p> }
               <button onClick={() => setOpen(null)}>Close</button>
             </div>
           </div>
