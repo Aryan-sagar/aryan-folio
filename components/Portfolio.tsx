@@ -560,7 +560,7 @@ function Watch() {
         <div className="winfo">
           <button className="arrow" onClick={() => nav.current.go(-1)} aria-label="Previous">←</button>
           <div key={p.t}>
-            <span className="wk">{label(p.kind)}</span>
+            <span className="wkind">{label(p.kind)}</span>
             <h3>{p.t}</h3>
             <p className="wby">{p.by} · {p.year}</p>
             {varied && <p className="wr"><span>Aryan&apos;s rating</span><b>{"★".repeat(p.stars)}</b></p>}
