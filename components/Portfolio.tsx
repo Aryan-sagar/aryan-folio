@@ -589,64 +589,139 @@ function Watch() {
   );
 }
 
+// Replaces the whole `function Side() { ... }` in components/Portfolio.tsx.
+// Delete from `function Side() {` down to the line just before
+// `// Looks for /public/about.jpg (or .jpeg/.png/.webp); shows a monogram until it exists.`
+// then paste this in its place. Nothing else in Portfolio.tsx changes.
+
+// Replaces the whole `function Side() { ... }` in components/Portfolio.tsx.
+// Delete from `function Side() {` down to the line just before
+// `// Looks for /public/about.jpg (or .jpeg/.png/.webp); shows a monogram until it exists.`
+// then paste this in its place. Nothing else in Portfolio.tsx changes.
+
 function Side() {
   const ref = useRef<HTMLElement>(null);
+  const trig = useRef<ScrollTrigger | null>(null);
   const n = SIDE.length;
+  const pad = (k: number) => String(k).padStart(2, "0");
+
   useEffect(() => {
-    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const ctx = gsap.context(() => {
-      const chaps = gsap.utils.toArray<HTMLElement>(".chap");
-      const bgs = gsap.utils.toArray<HTMLElement>(".cbg");
-      const dots = gsap.utils.toArray<HTMLElement>(".cprog li");
-      const titles = chaps.map((c) => c.querySelector(".ct span"));
-      const rest = chaps.map((c) => c.querySelectorAll(".cd, .cmeta"));
-      gsap.set(titles.slice(1), { yPercent: 115 });
-      gsap.set(rest.slice(1), { opacity: 0, y: 30 });
-      gsap.set(bgs.slice(1), { opacity: 0, scale: 1.14 });
-      gsap.set(bgs[0], { scale: 1.06 });
-      const tl = gsap.timeline({
-        scrollTrigger: {
-          trigger: ref.current, start: "top top", end: `+=${(n - 1) * 60}%`, pin: true, scrub: 1,
-          onUpdate: (self) => {
-            const idx = Math.min(n - 1, Math.round(self.progress * (n - 1)));
-            dots.forEach((d, k) => d.classList.toggle("on", k === idx));
-          },
-        },
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return; // CSS shows a plain stack instead
+    const root = ref.current!;
+    const mm = gsap.matchMedia();
+    mm.add("(min-width: 821px)", () => {
+      const cam = root.querySelector<HTMLElement>(".sqg-cam")!;
+      const hall = root.querySelector<HTMLElement>(".sqg-hall")!;
+      const frames = gsap.utils.toArray<HTMLElement>(".sqg-frame", root);
+      const shades = frames.map((f) => f.querySelector<HTMLElement>(".sqg-shade")!);
+      const glows = gsap.utils.toArray<HTMLElement>(".sqg-glow", root);
+      const dots = gsap.utils.toArray<HTMLElement>(".sqg-prog button", root);
+      const hint = root.querySelector<HTMLElement>(".sqg-hint");
+      const GAP = 1000; // distance between frames along the hall, in px
+      const clamp = gsap.utils.clamp;
+      let near = -1;
+
+      // p = scroll progress 0..1. The camera dwells on each frame, then glides to the next.
+      const render = (p: number) => {
+        const W = window.innerWidth;
+        const f = p * (n - 1);
+        const a = Math.min(n - 2, Math.floor(f));
+        const t = clamp(0, 1, (f - a - 0.2) / 0.6);
+        const s = t * t * (3 - 2 * t);
+        const g = a + s;
+        const fx = (i: number) => (i % 2 ? 1 : -1) * W * 0.27; // must match 27vw in the CSS
+        const camX = fx(a) + (fx(a + 1) - fx(a)) * s;
+        gsap.set(hall, { x: -camX, z: g * GAP });
+        frames.forEach((fr, i) => {
+          const rel = g - i; // < 0: still ahead of the camera, > 0: already passed
+          const focus = 1 - clamp(0, 1, Math.abs(rel) * 1.6);
+          const op = rel > 0 ? clamp(0, 1, 1 - rel / 0.45) : 1;
+          shades[i].style.opacity = String(rel < 0 ? Math.min(0.88, -rel * 0.38) : 0);
+          fr.style.opacity = String(op);
+          fr.style.visibility = op <= 0.01 ? "hidden" : "visible";
+          fr.style.pointerEvents = rel > 0.3 ? "none" : "auto";
+          fr.style.setProperty("--focus", focus.toFixed(3));
+          fr.style.setProperty("--tilt", clamp(0, 1, Math.abs(rel) * 1.2).toFixed(3));
+          if (Math.abs(rel) < 0.5) delete fr.dataset.cursor; else fr.dataset.cursor = "Step in";
+        });
+        const nr = Math.round(g);
+        if (nr !== near) {
+          near = nr;
+          glows.forEach((el, i) => el.classList.toggle("on", i === nr));
+          dots.forEach((el, i) => el.classList.toggle("on", i === nr));
+        }
+        hint?.classList.toggle("gone", p > 0.03);
+      };
+
+      const t = ScrollTrigger.create({
+        trigger: root, start: "top top", end: `+=${(n - 1) * 75}%`, pin: true,
+        onUpdate: (self) => render(self.progress),
+        onRefresh: (self) => render(self.progress),
       });
-      chaps.forEach((_, i) => {
-        if (!i) return;
-        tl.to(bgs[i - 1], { opacity: 0, scale: 1.0, duration: 1.2, ease: "none" }, i - 1)
-          .to(bgs[i], { opacity: 1, scale: 1.06, duration: 1.2, ease: "none" }, i - 1)
-          .to(titles[i - 1], { yPercent: -115, duration: 0.6, ease: "power2.in" }, i - 1)
-          .to(rest[i - 1], { opacity: 0, duration: 0.4 }, i - 1)
-          .to(titles[i], { yPercent: 0, duration: 0.7, ease: "power3.out" }, i - 0.5)
-          .to(rest[i], { opacity: 1, y: 0, duration: 0.5, stagger: 0.08 }, i - 0.35);
-      });
-    }, ref);
-    return () => ctx.revert();
+      trig.current = t;
+      render(0);
+
+      // The whole hall leans slightly toward the cursor
+      let off = () => {};
+      if (matchMedia("(pointer: fine)").matches) {
+        const rx = gsap.quickTo(cam, "rotationX", { duration: 0.9, ease: "power3" });
+        const ry = gsap.quickTo(cam, "rotationY", { duration: 0.9, ease: "power3" });
+        const mv = (e: MouseEvent) => {
+          ry((e.clientX / window.innerWidth - 0.5) * 6);
+          rx(-(e.clientY / window.innerHeight - 0.5) * 4);
+        };
+        const lv = () => { ry(0); rx(0); };
+        root.addEventListener("mousemove", mv);
+        root.addEventListener("mouseleave", lv);
+        off = () => { root.removeEventListener("mousemove", mv); root.removeEventListener("mouseleave", lv); };
+      }
+      return () => { off(); t.kill(); trig.current = null; };
+    });
+    return () => mm.revert();
   }, [n]);
+
+  const jump = (i: number) => {
+    const t = trig.current;
+    if (!t) return;
+    const y = t.start + (i / (n - 1)) * (t.end - t.start);
+    if (lenisRef) lenisRef.scrollTo(y, { duration: 1.5 }); else window.scrollTo({ top: y, behavior: "smooth" });
+  };
+
   return (
-    <section id="side" ref={ref} className="sides">
-      {SIDE.map((q) => (
-        <div className="cbg" key={q.t} style={{ backgroundImage: `url(${q.img}), linear-gradient(135deg, ${q.c}, #050505 72%)` }} />
+    <section id="side" ref={ref} className="sqg">
+      {SIDE.map((q, i) => (
+        <div key={q.t} className={`sqg-glow${i === 0 ? " on" : ""}`} aria-hidden="true"
+          style={{ background: `radial-gradient(60% 60% at 50% 55%, ${q.c}40, transparent 72%)` }} />
       ))}
-      <div className="cscrim" />
-      <div className="ctext">
-        {SIDE.map((q, i) => (
-          <div className="chap" key={q.t}>
-            <p className="cmeta" style={{ color: q.c }}>{String(i + 1).padStart(2, "0")} / {String(n).padStart(2, "0")}</p>
-            <h2 className="ct"><span>{q.t}</span></h2>
-            <p className="cd">{q.d}</p>
+      <div className="sqg-scene">
+        <div className="sqg-cam">
+          <div className="sqg-hall">
+            {SIDE.map((q, i) => (
+              <figure key={q.t} className="sqg-frame" onClick={() => jump(i)}
+                style={{ "--i": i, "--sx": i % 2 ? 1 : -1, "--c": q.c } as React.CSSProperties}>
+                <div className="sqg-photo" style={{ backgroundImage: `url(${q.img}), linear-gradient(135deg, ${q.c}, #050505 72%)` }}>
+                  <i className="sqg-shade" />
+                </div>
+                <figcaption className="sqg-txt">
+                  <span className="sqg-n" style={{ color: q.c }}>{pad(i + 1)} / {pad(n)}</span>
+                  <h2 className="sqg-t">{q.t}</h2>
+                  <p className="sqg-d">{q.d}</p>
+                </figcaption>
+              </figure>
+            ))}
           </div>
+        </div>
+      </div>
+      <div className="sqg-vig" aria-hidden="true" />
+      <div className="sqg-prog">
+        {SIDE.map((q, i) => (
+          <button key={q.t} type="button" className={i === 0 ? "on" : ""} aria-label={q.t} onClick={() => jump(i)}>{pad(i + 1)}</button>
         ))}
       </div>
-      <ul className="cprog" aria-hidden="true">
-        {SIDE.map((q, i) => <li key={q.t} className={i === 0 ? "on" : ""}>{String(i + 1).padStart(2, "0")}</li>)}
-      </ul>
+      <p className="sqg-hint">Scroll to walk through</p>
     </section>
   );
 }
-
 // Looks for /public/about.jpg (or .jpeg/.png/.webp); shows a monogram until it exists.
 function AboutPhoto() {
   const [url, setUrl] = useState<string | null>(null);
