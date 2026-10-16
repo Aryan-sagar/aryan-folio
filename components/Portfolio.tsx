@@ -701,7 +701,13 @@ function Side() {
   const trig = useRef<ScrollTrigger | null>(null);
   const n = SIDE.length;
   const pad = (k: number) => String(k).padStart(2, "0");
-
+  const GAP = 1000; // distance between frames along the hall, in px (the CSS uses the same 1000px)
+  // A few specks of dust floating in the hall. Whole-number maths only, so server and browser agree.
+  const dust = Array.from({ length: 28 }, (_, k) => {
+    const r = (s: number) => (((k + 1) * (s * 7919 + 104729)) % 9973) / 9973;
+    return { x: Math.round(-55 + r(1) * 110), y: Math.round(-38 + r(2) * 76), z: 200 - Math.round(r(3) * ((n - 1) * GAP + 1000)), s: 3 + Math.round(r(4) * 5) };
+  });
+ 
   useEffect(() => {
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) return; // CSS shows a plain stack instead
     const root = ref.current!;
@@ -714,10 +720,9 @@ function Side() {
       const glows = gsap.utils.toArray<HTMLElement>(".sqg-glow", root);
       const dots = gsap.utils.toArray<HTMLElement>(".sqg-prog button", root);
       const hint = root.querySelector<HTMLElement>(".sqg-hint");
-      const GAP = 1000; // distance between frames along the hall, in px
       const clamp = gsap.utils.clamp;
       let near = -1;
-
+ 
       // p = scroll progress 0..1. The camera dwells on each frame, then glides to the next.
       const render = (p: number) => {
         const W = window.innerWidth;
@@ -732,11 +737,12 @@ function Side() {
         frames.forEach((fr, i) => {
           const rel = g - i; // < 0: still ahead of the camera, > 0: already passed
           const focus = 1 - clamp(0, 1, Math.abs(rel) * 1.6);
-          const op = rel > 0 ? clamp(0, 1, 1 - rel / 0.45) : 1;
-          shades[i].style.opacity = String(rel < 0 ? Math.min(0.88, -rel * 0.38) : 0);
+          const op = rel > 0 ? clamp(0, 1, 1 - rel / 0.45) : 1 - clamp(0, 1, (-rel - 1.5) / 0.7);
+          shades[i].style.opacity = String(rel < 0 ? Math.min(0.7, -rel * 0.26) : 0);
           fr.style.opacity = String(op);
           fr.style.visibility = op <= 0.01 ? "hidden" : "visible";
           fr.style.pointerEvents = rel > 0.3 ? "none" : "auto";
+          fr.classList.toggle("is-on", Math.abs(rel) < 0.35);
           fr.style.setProperty("--focus", focus.toFixed(3));
           fr.style.setProperty("--tilt", clamp(0, 1, Math.abs(rel) * 1.2).toFixed(3));
           if (Math.abs(rel) < 0.5) delete fr.dataset.cursor; else fr.dataset.cursor = "Step in";
@@ -749,7 +755,7 @@ function Side() {
         }
         hint?.classList.toggle("gone", p > 0.03);
       };
-
+ 
       const t = ScrollTrigger.create({
         trigger: root, start: "top top", end: `+=${(n - 1) * 75}%`, pin: true,
         onUpdate: (self) => render(self.progress),
@@ -757,7 +763,7 @@ function Side() {
       });
       trig.current = t;
       render(0);
-
+ 
       // The whole hall leans slightly toward the cursor
       let off = () => {};
       if (matchMedia("(pointer: fine)").matches) {
@@ -776,14 +782,14 @@ function Side() {
     });
     return () => mm.revert();
   }, [n]);
-
+ 
   const jump = (i: number) => {
     const t = trig.current;
     if (!t) return;
     const y = t.start + (i / (n - 1)) * (t.end - t.start);
     if (lenisRef) lenisRef.scrollTo(y, { duration: 1.5 }); else window.scrollTo({ top: y, behavior: "smooth" });
   };
-
+ 
   return (
     <section id="side" ref={ref} className="sqg">
       {SIDE.map((q, i) => (
@@ -793,6 +799,10 @@ function Side() {
       <div className="sqg-scene">
         <div className="sqg-cam">
           <div className="sqg-hall">
+            {dust.map((d, k) => (
+              <i key={k} className="sqg-dust" aria-hidden="true"
+                style={{ width: d.s, height: d.s, marginLeft: -d.s / 2, marginTop: -d.s / 2, transform: `translate3d(${d.x}vw, ${d.y}vh, ${d.z}px)` }} />
+            ))}
             {SIDE.map((q, i) => (
               <figure key={q.t} className="sqg-frame" onClick={() => jump(i)}
                 style={{ "--i": i, "--sx": i % 2 ? 1 : -1, "--c": q.c } as React.CSSProperties}>
@@ -801,7 +811,11 @@ function Side() {
                 </div>
                 <figcaption className="sqg-txt">
                   <span className="sqg-n" style={{ color: q.c }}>{pad(i + 1)} / {pad(n)}</span>
-                  <h2 className="sqg-t">{q.t}</h2>
+                  <h2 className="sqg-t" aria-label={q.t}>
+                    {Array.from(q.t).map((ch, k) => (
+                      <span key={k} className="sqg-c" aria-hidden="true" style={{ transitionDelay: `${k * 35}ms` }}>{ch === " " ? "\u00a0" : ch}</span>
+                    ))}
+                  </h2>
                   <p className="sqg-d">{q.d}</p>
                 </figcaption>
               </figure>

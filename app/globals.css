@@ -1006,3 +1006,79 @@ html.seen .hero .title, html.seen .hero .lede, html.seen .hero .hello { animatio
   .cine-end { opacity: 1; visibility: visible; margin-top: 24px; }
   .cine-rec i, .cine-cue i { animation: none; }
 }
+/* ===== Side quests: 3D gallery walk. Paste at the bottom of globals.css ===== */
+.sqg {
+  --sqg-serif: var(--font-cormorant, "Cormorant Garamond"), Georgia, "Times New Roman", serif;
+  --fw: min(46vw, 820px);
+  --fh: min(64vh, 620px);
+  position: relative; height: 100vh; min-height: 620px; overflow: hidden;
+  background: #070707; color: #f2efe8;
+}
+.sqg-glow { position: absolute; inset: 0; opacity: 0; transition: opacity 0.9s ease; pointer-events: none; }
+.sqg-glow.on { opacity: 0.5; }
+
+.sqg-scene { position: absolute; inset: 0; perspective: 1400px; perspective-origin: 50% 46%; }
+.sqg-cam, .sqg-hall { position: absolute; inset: 0; transform-style: preserve-3d; }
+.sqg-hall { will-change: transform; }
+
+.sqg-frame {
+  position: absolute; left: 50%; top: 53%; margin: calc(var(--fh) / -2) 0 0 calc(var(--fw) / -2);
+  width: var(--fw); height: var(--fh);
+  transform-style: preserve-3d;
+  transform: translate3d(calc(var(--sx) * 27vw), 0, calc(var(--i) * -1000px)) rotateY(calc(var(--sx) * 9deg * var(--tilt, 1)));
+  cursor: pointer;
+}
+.sqg-photo {
+  position: absolute; inset: 0; overflow: hidden; border-radius: 16px;
+  background-size: cover; background-position: center; background-repeat: no-repeat;
+  border: 1px solid rgba(242, 239, 232, 0.12);
+  box-shadow: 0 40px 120px -60px color-mix(in srgb, var(--c) 50%, transparent);
+}
+.sqg-photo::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to top, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.25) 45%, transparent 72%); }
+.sqg-shade { position: absolute; inset: 0; z-index: 1; background: #050505; opacity: 0; pointer-events: none; }
+
+/* Text sits in front of the photo, so it shifts against it as you move the mouse */
+.sqg-txt { position: absolute; left: 6%; right: 6%; bottom: 7%; display: flex; flex-direction: column; gap: 12px; margin: 0; transform: translateZ(70px); pointer-events: none; }
+.sqg-n { font-size: 0.85rem; font-weight: 700; letter-spacing: 0.04em; opacity: calc(0.3 + 0.7 * var(--focus, 1)); }
+.sqg-t { margin: 0; font-size: calc(var(--fw) * 0.115); font-weight: 800; line-height: 0.92; letter-spacing: -0.03em; text-transform: uppercase; white-space: nowrap; text-shadow: 0 6px 40px rgba(0, 0, 0, 0.45); opacity: calc(0.45 + 0.55 * var(--focus, 1)); }
+.sqg-d { margin: 0; max-width: 22em; font-family: var(--sqg-serif); font-style: italic; font-size: clamp(1.1rem, 1.7vw, 1.6rem); line-height: 1.3; opacity: var(--focus, 1); }
+
+.sqg-vig { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(120% 90% at 50% 50%, transparent 55%, rgba(0, 0, 0, 0.65)); }
+
+.sqg-prog { position: absolute; right: clamp(14px, 2vw, 32px); top: 50%; z-index: 3; display: flex; flex-direction: column; gap: 10px; transform: translateY(-50%); }
+.sqg-prog button { background: none; border: 0; padding: 2px 0; font: inherit; font-size: 0.8rem; font-weight: 700; color: #8a867e; text-align: right; transition: color 0.3s, font-size 0.3s; }
+.sqg-prog button:hover { color: #f2efe8; }
+.sqg-prog button.on { color: #ffa94d; font-size: 1.15rem; }
+
+.sqg-hint { position: absolute; left: 50%; bottom: 24px; z-index: 3; margin: 0; transform: translateX(-50%); color: #9a968e; font-size: 0.9rem; transition: opacity 0.4s; }
+.sqg-hint.gone { opacity: 0; }
+
+.sqg button:focus-visible { outline: 2px solid #ffa94d; outline-offset: 4px; }
+
+/* Phones and reduced motion: no 3D, just a calm stack of photos */
+@media (max-width: 820px), (prefers-reduced-motion: reduce) {
+  .sqg { height: auto; min-height: 0; overflow: visible; padding: 64px clamp(16px, 5vw, 32px); }
+  .sqg-scene, .sqg-cam, .sqg-hall { position: static; perspective: none; transform: none !important; }
+  .sqg-frame { position: relative; left: auto; top: auto; width: 100%; height: min(70vh, 520px); margin: 0 0 24px; transform: none !important; opacity: 1 !important; visibility: visible !important; pointer-events: auto !important; }
+  .sqg-txt { transform: none; }
+  .sqg-t { font-size: clamp(2rem, 11vw, 3.5rem); }
+  .sqg-glow, .sqg-vig, .sqg-prog, .sqg-hint { display: none; }
+}
+
+
+.sqg-dust { position: absolute; left: 50%; top: 50%; border-radius: 50%; pointer-events: none; background: radial-gradient(circle, rgba(255, 240, 215, 0.65), transparent 70%); }
+/* Glossy floor: each photo reflects below it (Chrome, Edge and Safari; Firefox just skips it) */
+.sqg-photo { -webkit-box-reflect: below 8px linear-gradient(transparent 60%, rgba(255, 255, 255, 0.16)); }
+/* A quick sheen of light across a photo when it arrives */
+.sqg-photo::before { content: ""; position: absolute; inset: 0; z-index: 2; pointer-events: none; background: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, 0.2) 50%, transparent 62%); transform: translateX(-130%); }
+.sqg-frame.is-on .sqg-photo::before { animation: sqgsheen 1.2s ease 0.2s 1 forwards; }
+@keyframes sqgsheen { to { transform: translateX(130%); } }
+/* The title's letters rise into place when a frame arrives */
+.sqg-c { display: inline-block; transform: translateY(30%); transition: transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.sqg-frame.is-on .sqg-c { transform: none; }
+@media (max-width: 820px), (prefers-reduced-motion: reduce) {
+  .sqg-dust { display: none; }
+  .sqg-photo { -webkit-box-reflect: none; }
+  .sqg-photo::before { display: none; }
+  .sqg-c { transform: none; transition: none; }
+}
