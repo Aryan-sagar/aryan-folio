@@ -352,7 +352,7 @@ function Work() {
   );
 }
 // Tries the given file, then the same name with .jpg/.jpeg/.png/.webp. Shows the shot number until one loads.
-function FrameImg({ src, n }: { src: string; n: string }) {
+function FrameImg({ src, n, onUrl }: { src: string; n: string; onUrl?: (u: string) => void }) {
   const [url, setUrl] = useState<string | null>(null);
   useEffect(() => {
     if (!src) return;
@@ -362,16 +362,18 @@ function FrameImg({ src, n }: { src: string; n: string }) {
     const probe = (i: number) => {
       if (i >= list.length || dead) return;
       const im = new Image();
-      im.onload = () => { if (!dead) setUrl(list[i]); };
+      im.onload = () => { if (!dead) { setUrl(list[i]); onUrl?.(list[i]); } };
       im.onerror = () => probe(i + 1);
       im.src = list[i];
     };
     probe(0);
     return () => { dead = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [src]);
   // eslint-disable-next-line @next/next/no-img-element
   return url ? <img src={url} alt="" onLoad={() => ScrollTrigger.refresh()} /> : <span>{n}</span>;
 }
+
 
 // Showreel: drop a video at public/film/reel.mp4, or set a YouTube video id below. It appears at the end of the film strip.
 const REEL = { mp4: "/film/reel.mp4", youtube: "" };
@@ -420,38 +422,142 @@ function Reel() {
 
 function Film() {
   const ref = useRef<HTMLElement>(null);
+  const [urls, setUrls] = useState<string[]>([]);
+  const setU = (i: number) => (u: string) => setUrls((a) => { if (a[i] === u) return a; const b = a.slice(); b[i] = u; return b; });
+  const n = FRAMES.length;
+  const urlsRef = useRef<string[]>([]);
+  const syncAmb = useRef<(() => void) | null>(null);
+  useEffect(() => { urlsRef.current = urls; syncAmb.current?.(); }, [urls]);
+
   useEffect(() => {
-    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!n || matchMedia("(prefers-reduced-motion: reduce)").matches) return; // CSS shows a plain stack instead
+    const root = ref.current!;
+    let off = () => {};
     const ctx = gsap.context(() => {
-      const track = ref.current!.querySelector<HTMLElement>(".ftrack")!;
-      gsap.to(track, {
-        x: () => -(track.scrollWidth - window.innerWidth), ease: "none",
-        scrollTrigger: { trigger: ref.current, start: "top top", end: () => "+=" + (track.scrollWidth - window.innerWidth), pin: true, scrub: 0.5, invalidateOnRefresh: true },
+      const all = <T extends HTMLElement>(s: string) => gsap.utils.toArray<T>(s, root);
+      const one = (s: string) => root.querySelector<HTMLElement>(s)!;
+      const shots = all(".cine-shot"), imgs = all(".cine-img"), ambs = all(".cine-amb"), subs = all(".cine-subt");
+      const title = one(".cine-title"), end = one(".cine-end"), streak = one(".cine-streak");
+      const stage = one(".cine-stage"), bg = one(".cine-bg");
+      const tc = one(".cine-tc"), lab = one(".cine-lab"), bar = one(".cine-prog b");
+      const pad = (v: number) => String(v).padStart(2, "0");
+      let cur = -2, flip = 0, shown = -2;
+
+      // The room colour uses just two layers that take turns, so any number of photos stays light
+      const showAmb = (k: number) => {
+        const idx = Math.max(0, Math.min(n - 1, k));
+        const dim = k < 0 || k >= n; // title card and end card: a fainter glow
+        const url = urlsRef.current[idx];
+        if (idx !== shown) {
+          shown = idx;
+          const next = ambs[flip ^ 1];
+          next.style.backgroundImage = url ? `url("${url}")` : "";
+          next.classList.add("on");
+          next.classList.toggle("dim", dim);
+          ambs[flip].classList.remove("on");
+          flip ^= 1;
+        } else {
+          const here = ambs[flip];
+          if (!here.style.backgroundImage && url) here.style.backgroundImage = `url("${url}")`;
+          here.classList.toggle("dim", dim);
+        }
+      };
+      syncAmb.current = () => { shown = -2; showAmb(cur); };
+
+      // The little display in the bottom bar: timecode, current shot, progress line
+      const hud = () => {
+        const p = tl.progress(), t = tl.time();
+        const fr = Math.round(p * 90 * 24); // a pretend 90-second film at 24 fps
+        tc.textContent = `00:${pad(Math.floor(fr / 1440))}:${pad(Math.floor(fr / 24) % 60)}:${pad(fr % 24)}`;
+        bar.style.transform = `scaleX(${p.toFixed(4)})`;
+        const k = t < 0.85 ? -1 : t >= n + 0.85 ? n : Math.floor(t - 0.85);
+        if (k !== cur) {
+          cur = k;
+          lab.textContent = k < 0 ? "Scroll to play" : k >= n ? "End credits" : `Shot ${FRAMES[k].shot} · ${FRAMES[k].loc}`;
+          showAmb(k);
+        }
+      };
+
+      gsap.set([...shots, ...subs], { opacity: 0 });
+      gsap.set(end, { autoAlpha: 0 });
+
+      // Scrolling is the playhead. One unit of time is one scene. More photos get a little less scroll each.
+      const per = Math.max(45, Math.min(70, 600 / n));
+      const tl = gsap.timeline({
+        defaults: { ease: "none" },
+        onUpdate: hud,
+        scrollTrigger: { trigger: root, start: "top top", end: `+=${(n + 2) * per}%`, pin: true, scrub: 0.6 },
       });
-    }, ref);
-    return () => ctx.revert();
-  }, []);
+      tl.to(title, { opacity: 0, y: -30, duration: 0.45 }, 0.55);
+      shots.forEach((s, i) => {
+        const a = 0.85 + i, dir = i % 2 ? 1 : -1;
+        tl.fromTo(s, { opacity: 0 }, { opacity: 1, duration: 0.3 }, a)
+          .fromTo(imgs[i], { scale: 1, xPercent: dir * 1.5 }, { scale: 1.05, xPercent: -dir * 1.5, duration: 1.3 }, a - 0.1) // slow push-in
+          .fromTo(subs[i], { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.25 }, a + 0.25)
+          .to(subs[i], { opacity: 0, duration: 0.2 }, a + 0.85)
+          .fromTo(streak, { opacity: 0, scaleX: 0.3 }, { opacity: 0.5, scaleX: 1, duration: 0.12 }, a + 0.05) // lens streak on each cut
+          .to(streak, { opacity: 0, duration: 0.3 }, a + 0.17)
+          .to(s, { opacity: 0, duration: 0.3 }, a + 0.85);
+      });
+      tl.fromTo(end, { autoAlpha: 0, y: 20 }, { autoAlpha: 1, y: 0, duration: 0.4 }, n + 1.0);
+      tl.to({}, { duration: 0.001 }, n + 1.9); // hold the end card a moment
+
+      // The room leans a little toward the cursor
+      if (matchMedia("(pointer: fine)").matches) {
+        const sx = gsap.quickTo(stage, "x", { duration: 1, ease: "power3" });
+        const sy = gsap.quickTo(stage, "y", { duration: 1, ease: "power3" });
+        const bx = gsap.quickTo(bg, "x", { duration: 1.2, ease: "power3" });
+        const by = gsap.quickTo(bg, "y", { duration: 1.2, ease: "power3" });
+        const mv = (e: MouseEvent) => {
+          const nx = e.clientX / window.innerWidth - 0.5, ny = e.clientY / window.innerHeight - 0.5;
+          sx(nx * -14); sy(ny * -10); bx(nx * 30); by(ny * 20);
+        };
+        root.addEventListener("mousemove", mv);
+        off = () => root.removeEventListener("mousemove", mv);
+      }
+      hud();
+    }, root);
+    return () => { off(); syncAmb.current = null; ctx.revert(); };
+  }, [n]);
+
   return (
-    <section id="film" ref={ref} className="film">
-      <div className="fhead">
+    <section id="film" ref={ref} className="cine">
+      <div className="cine-bg" aria-hidden="true">
+        <i className="cine-amb" />
+        <i className="cine-amb" />
+      </div>
+      <div className="cine-title">
         <h2>Engineer by profession.<br />Filmmaker whenever I can.</h2>
         <p>Cinematography, storytelling, editing and colour grading. Shot on iPhone, cut in DaVinci Resolve.</p>
+        <p className="cine-cue"><i />Scroll to play</p>
       </div>
-      <div className="ftrack">
-        {FRAMES.map((f) => (
-          <figure className="frame" key={f.shot}>
-            <div className="shot">
-              <FrameImg src={f.src} n={f.shot} />
-            </div>
-            <figcaption>Shot {f.shot} · {f.loc} · {f.cam} · Edited in DaVinci</figcaption>
+      <div className="cine-stage">
+        {FRAMES.map((f, i) => (
+          <figure className="cine-shot" key={f.shot}>
+            <div className="cine-img"><FrameImg src={f.src} n={f.shot} onUrl={setU(i)} /></div>
+            <figcaption className="cine-subt"><em>{f.loc}</em><small>Shot {f.shot} · {f.cam}</small></figcaption>
           </figure>
         ))}
-        <Reel />
+      </div>
+      <div className="cine-end">
+        <p className="cine-fin">Fin.</p>
+        <p className="cine-credit">Shot on iPhone. Cut in DaVinci Resolve.</p>
+        <div className="cine-reel"><Reel /></div>
+      </div>
+      <i className="cine-streak" aria-hidden="true" />
+      <div className="cine-vig" aria-hidden="true" />
+      <div className="cine-bar t" aria-hidden="true" />
+      <div className="cine-bar b" aria-hidden="true">
+        <div className="cine-prog"><b /></div>
+        <div className="cine-hud">
+          <span className="cine-rec"><i />REC</span>
+          <span className="cine-tc">00:00:00:00</span>
+          <span className="cine-lab">Scroll to play</span>
+        </div>
       </div>
     </section>
   );
 }
-
 function Watch() {
   const [kind, setKind] = useState<"all" | "movie" | "anime">("all");
   const [open, setOpen] = useState<Pick | null>(null);
@@ -589,15 +695,6 @@ function Watch() {
   );
 }
 
-// Replaces the whole `function Side() { ... }` in components/Portfolio.tsx.
-// Delete from `function Side() {` down to the line just before
-// `// Looks for /public/about.jpg (or .jpeg/.png/.webp); shows a monogram until it exists.`
-// then paste this in its place. Nothing else in Portfolio.tsx changes.
-
-// Replaces the whole `function Side() { ... }` in components/Portfolio.tsx.
-// Delete from `function Side() {` down to the line just before
-// `// Looks for /public/about.jpg (or .jpeg/.png/.webp); shows a monogram until it exists.`
-// then paste this in its place. Nothing else in Portfolio.tsx changes.
 
 function Side() {
   const ref = useRef<HTMLElement>(null);

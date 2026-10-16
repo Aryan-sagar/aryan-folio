@@ -6,6 +6,8 @@ export const FRAMES = [
   { shot: "03", loc: "IIT Ropar", cam: "iPhone", src: "/film/shot3.jpg" },
   { shot: "04", loc: "IIT Ropar", cam: "iPhone", src: "/film/shot4.jpg" },
   { shot: "05", loc: "IIT Ropar", cam: "iPhone", src: "/film/shot5.jpg" },
+  { shot: "06", loc: "Mumbai", cam: "iPhone", src: "/film/shot6.jpg" },
+  { shot: "07", loc: "Mussorie", cam: "iPhone", src: "/film/shot7.jpg" },
 ];
 
 export type Pick = { t: string; kind: "movie" | "anime"; by: string; year: string; genre: string; stars: number; note: string; color: string; poster?: string; placeholder?: boolean };
