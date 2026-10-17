@@ -9,8 +9,9 @@ import { FRAMES, WATCH, SIDE, ABOUT, ABOUT_ROTATE, type Pick } from "./content";
 import Pip from "../app/Pip";
 import Link from "next/link";
 import { slugFor, STUDIES } from "./work-data";
-gsap.registerPlugin(ScrollTrigger);
-
+import { SplitText } from "gsap/SplitText";
+import { MorphSVGPlugin } from "gsap/MorphSVGPlugin";
+gsap.registerPlugin(ScrollTrigger, SplitText, MorphSVGPlugin);
 // Quiet "film stock" colours for the project preview cards. Swap for real stills later.
 // Edit freely. `stack` and `year` are shown only when filled. Add `href` to make "View case study" a real link.
 type Proj = { id: string; title: string; tags: string; line: string; points: string[]; stats?: [string, string][]; stack: string[]; year?: string; repo?: string; demo?: string; glow: string };
@@ -196,8 +197,6 @@ const CHAPTERS = [
   { id: "about", t: "About", d: "Who is behind this" },
   { id: "contact", t: "Contact", d: "Have something interesting in mind?" },
 ];
-
-// Fixed chapter indicator: always says where you are.
 
 
 function FaceIcon({ k }: { k: string }) {
@@ -868,7 +867,19 @@ function Now() {
     const ctx = gsap.context(() => {
       const st = { trigger: ".ab-grid", start: "top 72%" };
       gsap.from(".ab-photo", { clipPath: "inset(100% 0% 0% 0%)", duration: 1.3, ease: "power4.inOut", scrollTrigger: st });
-      gsap.from(".ab-text > *", { opacity: 0, y: 36, duration: 0.9, ease: "power3.out", stagger: 0.12, delay: 0.25, scrollTrigger: st });
+      const lead = ref.current!.querySelector<HTMLElement>(".ab-lead")!;
+      gsap.set(lead, { opacity: 0 });
+      gsap.from(".ab-text > *:not(.ab-lead)", { opacity: 0, y: 36, duration: 0.9, ease: "power3.out", stagger: 0.12, delay: 0.55, scrollTrigger: st });
+      SplitText.create(lead, {
+        type: "lines",
+        mask: "lines",
+        linesClass: "ab-line",
+        autoSplit: true,
+         onSplit: (self) => {
+      gsap.set(lead, { opacity: 1 });
+    return gsap.from(self.lines, { yPercent: 110, duration: 1, ease: "power4.out", stagger: 0.1, delay: 0.25, scrollTrigger: st });
+  },
+});
     }, ref);
     return () => ctx.revert();
   }, []);
@@ -1126,6 +1137,22 @@ export default function Portfolio() {
         });
         el.addEventListener("mouseleave", () => { mx(0); my(0); });
       });
+      // Hover either sticker: the bolt and the camera swap shapes
+const boltP = root.current!.querySelector<SVGPathElement>('[data-ic="bolt"] path');
+const camP = root.current!.querySelector<SVGPathElement>('[data-ic="cam"] path');
+if (boltP && camP) {
+  const BOLT = "M13 2 4 14h7l-1 8 9-12h-7z";
+  const CAM = "M4 6h10a2 2 0 0 1 2 2v2l6-3v10l-6-3v2a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z";
+  const swap = (on: boolean) => {
+    const o = { duration: 0.7, ease: "power3.inOut", overwrite: true } as const;
+    gsap.to(boltP, { ...o, morphSVG: on ? CAM : BOLT, stroke: on ? "#2bb3ff" : "#ffa94d", fill: on ? "#2bb3ff" : "rgba(255,169,77,0)" });
+    gsap.to(camP, { ...o, morphSVG: on ? BOLT : CAM, stroke: on ? "#ffa94d" : "#2bb3ff", strokeWidth: on ? 2 : 0, fill: on ? "rgba(43,179,255,0)" : "#2bb3ff" });
+  };
+  const swapOn = () => swap(true), swapOff = () => swap(false);
+  const icons = gsap.utils.toArray<HTMLElement>("[data-ic]", root.current!);
+  icons.forEach((el) => { el.addEventListener("mouseenter", swapOn); el.addEventListener("mouseleave", swapOff); });
+  cleanups.push(() => icons.forEach((el) => { el.removeEventListener("mouseenter", swapOn); el.removeEventListener("mouseleave", swapOff); }));
+}
     }, root);
 
     return () => { cleanups.forEach((f) => f()); ctx.revert(); };
@@ -1164,8 +1191,8 @@ export default function Portfolio() {
           {[["A", "R", "Y", "A", "N", "bolt"], ["S", "A", "G", "A", "R", "cam"]].map((tokens, li) => (
             <div className="line" key={li} aria-hidden="true">
               {tokens.map((t, i) =>
-                t === "bolt" ? <span className="hl ic" key={i}><svg viewBox="0 0 24 24" fill="none" stroke="#ffa94d" strokeWidth="2" strokeLinejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z" /></svg></span>
-                : t === "cam" ? <a className="hl ic" href="#film" aria-label="Filmmaking" data-cursor="Film" tabIndex={-1} key={i}><svg viewBox="0 0 24 24" fill="#2bb3ff"><rect x="2" y="6" width="14" height="12" rx="2" /><path d="M17 10l5-3v10l-5-3z" /></svg></a>
+                t === "bolt" ? <span className="hl ic" data-ic="bolt" key={i}><svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z" fill="rgba(255,169,77,0)" stroke="#ffa94d" strokeWidth="2" strokeLinejoin="round" /></svg></span>
+                : t === "cam" ? <a className="hl ic" data-ic="cam" href="#film" aria-label="Filmmaking" data-cursor="Film" tabIndex={-1} key={i}><svg viewBox="0 0 24 24"><path d="M4 6h10a2 2 0 0 1 2 2v2l6-3v10l-6-3v2a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" fill="#2bb3ff" stroke="#2bb3ff" strokeWidth="0" strokeLinejoin="round" /></svg></a>
                 : <span className="hl" key={i}>{t}</span>)}
             </div>
           ))}
